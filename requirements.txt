@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+openai
+python-multipart
+PyMuPDF
+mysql-connector-python
+numpy
+python-dotenv
+mysqlclient
