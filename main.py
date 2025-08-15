@@ -1,18 +1,33 @@
 from fastapi import FastAPI
 from routes import doc_routes
 from fastapi.middleware.cors import CORSMiddleware
+import os
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from routes import doc_routes
 
-app = FastAPI(title="ChatDOC Clone")
+UPLOAD_DIR = "uploaded_docs"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+app = FastAPI(title="ChatDOC")
+
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # or specify ["http://127.0.0.1:5500"]
+    allow_origins=["http://localhost:8080", "http://127.0.0.1:8080"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-app.include_router(doc_routes.router, prefix="/document", tags=["Document"])
+# Mount uploaded docs folder so frontend can access files
+app.mount("/uploaded_docs", StaticFiles(directory=UPLOAD_DIR), name="uploaded_docs")
+
+# Include your document routes
+#app.include_router(doc_routes.router, prefix="/api")
+app.include_router(doc_routes.router)
+
 @app.get("/")
 async def root():
     return {"message": "Welcome to the ChatDOC API!"}

@@ -96,8 +96,8 @@ const initialMessages: ChatMessage[] = [
 ];
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [documents, setDocuments] = useState<PDFDocument[]>(initialDocuments);
-  const [selectedDocument, setSelectedDocumentState] = useState<PDFDocument | null>(initialDocuments[0]);
+  const [documents, setDocuments] = useState<PDFDocument[]>([]);
+  const [selectedDocument, setSelectedDocumentState] = useState<PDFDocument | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [currentPage, setCurrentPage] = useState(1);
   const [zoom, setZoom] = useState(100);

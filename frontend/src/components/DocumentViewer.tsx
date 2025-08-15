@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useEffect } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import {
   ZoomIn,
   ZoomOut,
@@ -13,43 +13,57 @@ import {
   FileText,
   Calendar
 } from "lucide-react";
-import { useApp } from "@/contexts/AppContext";
+import { ChatMessage, PDFDocument, useApp } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
 import sampleDocument from "@/assets/sample-document.jpg";
+import axios from "axios";
+import { Document, Page, pdfjs } from "react-pdf";
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
 
 export const DocumentViewer = () => {
   const { selectedDocument, currentPage, setCurrentPage, zoom, setZoom } = useApp();
   const { toast } = useToast();
+  const [pdfData, setPdfData] = useState<Uint8Array | null>(null);
 
   const handleZoomIn = () => setZoom(Math.min(zoom + 25, 200));
   const handleZoomOut = () => setZoom(Math.max(zoom - 25, 50));
   const handlePrevPage = () => setCurrentPage(Math.max(currentPage - 1, 1));
   const handleNextPage = () => setCurrentPage(Math.min(currentPage + 1, selectedDocument?.pages || 1));
-  
+
   const handleDownload = () => {
     toast({
       title: "Download started",
       description: `Downloading ${selectedDocument?.name}...`,
     });
   };
-  useEffect(() => {
-    if (selectedDocument) {
-      // Fetch document details if needed
-      fetch(`http://127.0.0.1:8000/api/documents/${selectedDocument.id}`)
-        .then((response) => response.json())
-        .then((data) => {
-          // Handle the fetched document details
-        });
-    }
-  }, [selectedDocument]);
 
-  
+  useEffect(() => {
+  if (selectedDocument) {
+    axios.get(`http://127.0.0.1:8000/document/get/${selectedDocument.id}`, {
+      responseType: "arraybuffer",
+    })
+      .then((res) => {
+        setPdfData(res.data);
+      })
+      .catch((error) => {
+        console.error("Error fetching PDF:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load PDF file.",
+          variant: "destructive",
+        });
+      });
+  }
+}, [selectedDocument, toast]);
+
+
   const handleShare = () => {
     toast({
       title: "Share link copied",
       description: "Document share link copied to clipboard.",
     });
-  }
+  };
+
   if (!selectedDocument) {
     return (
       <div className="flex-1 flex items-center justify-center bg-neutral-100">
@@ -71,6 +85,7 @@ export const DocumentViewer = () => {
             <div className="w-10 h-10 bg-red-50 border border-red-200 rounded-lg flex items-center justify-center">
               <FileText className="w-5 h-5 text-red-600" />
             </div>
+
             <div>
               <h2 className="text-lg font-semibold text-foreground">
                 {selectedDocument.name}
@@ -80,17 +95,17 @@ export const DocumentViewer = () => {
                   <Calendar className="w-4 h-4" />
                   Uploaded {new Date(selectedDocument.uploadDate).toLocaleDateString()}
                 </div>
-                <Badge 
-                  variant="secondary" 
+                <Badge
+                  variant="secondary"
                   className={
-                    selectedDocument.status === 'completed' 
+                    selectedDocument.status === 'completed'
                       ? "bg-green-50 text-green-700 border-green-200"
                       : selectedDocument.status === 'processing'
                       ? "bg-blue-50 text-blue-700 border-blue-200"
                       : "bg-red-50 text-red-700 border-red-200"
                   }
                 >
-                  {selectedDocument.status === 'completed' ? 'Ready' : 
+                  {selectedDocument.status === 'completed' ? 'Ready' :
                    selectedDocument.status === 'processing' ? 'Processing' : 'Error'}
                 </Badge>
               </div>
@@ -134,9 +149,9 @@ export const DocumentViewer = () => {
 
           {/* Page navigation */}
           <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handlePrevPage}
               disabled={currentPage === 1}
             >
@@ -147,9 +162,9 @@ export const DocumentViewer = () => {
                 Page {currentPage} of {selectedDocument.pages}
               </span>
             </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handleNextPage}
               disabled={currentPage === selectedDocument.pages}
             >
@@ -164,23 +179,22 @@ export const DocumentViewer = () => {
         <div className="max-w-4xl mx-auto">
           {/* Page container */}
           <div className="bg-white shadow-lg rounded-lg overflow-hidden mb-6">
-            <div 
+            <div
               className="relative"
               style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'top center' }}
             >
-              <img 
-                src={sampleDocument}
-                alt={`Page ${currentPage}`}
-                className="w-full h-auto block"
-                style={{ maxWidth: '800px', margin: '0 auto' }}
-              />
-              
+              {pdfData && (
+                <Document file={{ data: pdfData }}>
+                  <Page pageNumber={currentPage} scale={zoom / 100} />
+                </Document> 
+              )}
+
               {/* Highlight overlay example */}
-              <div 
+              <div
                 className="absolute bg-yellow-200 bg-opacity-50 border-2 border-yellow-400 cursor-pointer hover:bg-opacity-70"
                 style={{
                   top: '20%',
-                  left: '10%', 
+                  left: '10%',
                   width: '40%',
                   height: '8%'
                 }}
@@ -192,12 +206,12 @@ export const DocumentViewer = () => {
           {/* Show second page in 2-page view */}
           {currentPage < selectedDocument.pages && (
             <div className="bg-white shadow-lg rounded-lg overflow-hidden">
-              <div 
+              <div
                 className="relative"
                 style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'top center' }}
               >
-                <img 
-                  src={sampleDocument}
+                <img
+                  src={`http://127.0.0.1:8080/uploaded_docs/${selectedDocument.name}`}
                   alt={`Page ${currentPage + 1}`}
                   className="w-full h-auto block opacity-90"
                   style={{ maxWidth: '800px', margin: '0 auto' }}
