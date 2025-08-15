@@ -13,16 +13,20 @@ def insert_chunk_with_token(text, embedding, metadata):
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-            cursor.execute("""
-                    INSERT INTO document_chunks (document_id, chunk, embedding, page, source)
-                    VALUES (%s, %s, %s, %s, %s)""",   
+            cursor.execute(
+                """
+                INSERT INTO documents (file_name, chunk, embedding, page, source, document_id)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                """,
                 (
-                metadata.get("document_id"),
-                text,
-                json.dumps(embedding),
-                metadata.get("page"),
-                metadata.get("source")
-                ))
+                    metadata.get("file_name", "external.pdf"),
+                    text,
+                    json.dumps(embedding),
+                    metadata.get("page"),
+                    metadata.get("source"),
+                    metadata.get("document_id")
+                )
+            )
             conn.commit()
     finally:
         conn.close()
@@ -34,7 +38,7 @@ def search_similar_chunks(query_embedding, document_ids, top_k=5):
             format_strings = ','.join(['%s'] * len(document_ids))
             cur.execute(f"""
                 SELECT chunk, embedding, page, source 
-                FROM document_chunks
+                FROM documents 
                 WHERE document_id IN ({format_strings})
             """, tuple(document_ids))
             rows = cur.fetchall()
@@ -71,10 +75,10 @@ def store_chunk(document_id, filename, chunk, embedding):
     try:
         with conn.cursor() as cursor:
             # Convert embedding to JSON string if necessary
-            cursor.execute("""
-                    INSERT INTO document_chunks (document_id, chunk, embedding)
-                    VALUES (%s, %s, %s)
-                """, (document_id, chunk, json.dumps(embedding)))
+            cursor.execute(
+                "INSERT INTO documents (document_id, file_name, chunk, embedding) VALUES (%s, %s, %s, %s)",
+                 (document_id, filename, chunk, json.dumps(embedding))
+    )
             conn.commit()
     finally:
         conn.close()

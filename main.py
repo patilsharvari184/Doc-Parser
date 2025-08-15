@@ -1,10 +1,8 @@
-from fastapi import FastAPI
-from routes import doc_routes
-from fastapi.middleware.cors import CORSMiddleware
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+
 from routes import doc_routes
 
 UPLOAD_DIR = "uploaded_docs"
@@ -12,7 +10,6 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 app = FastAPI(title="ChatDOC")
 
-# CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:8080", "http://127.0.0.1:8080"],
@@ -21,11 +18,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount uploaded docs folder so frontend can access files
+# Serve uploaded PDFs statically (so frontend can preview)
 app.mount("/uploaded_docs", StaticFiles(directory=UPLOAD_DIR), name="uploaded_docs")
 
-# Include your document routes
-#app.include_router(doc_routes.router, prefix="/api")
+# API routes
 app.include_router(doc_routes.router)
 
 @app.get("/")
